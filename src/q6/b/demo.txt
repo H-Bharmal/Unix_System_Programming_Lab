@@ -1,0 +1,3 @@
+a demo file for demonstrating the lock file
+a;lksdjf;asdlfjaelriughsrgiushgkjsdfhglsdkjfghslgiuserhsuhlgksdhfgldkjfghslkjgsrlgiusrhglseghsdfg
+thirdlinesstartadlfkgjhsdfglshgliersdo some junk files
