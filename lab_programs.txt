@@ -1,0 +1,440 @@
+#q1a
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+
+int main(int argc, char *argv[])
+{
+    int source, dest, n;
+    char buf;
+    off_t filesize, i;
+
+    if (argc != 3)
+    {
+        fprintf(stderr, "usage: %s <source> <dest>\n", argv[0]);
+        exit(-1);
+    }
+
+    if ((source = open(argv[1], O_RDONLY)) < 0)
+    {
+        fprintf(stderr, "can't open source\n");
+        exit(-1);
+    }
+
+    if ((dest = open(argv[2], O_WRONLY | O_CREAT | O_TRUNC, 0666)) < 0)
+    {
+        fprintf(stderr, "can't create destination\n");
+        exit(-1);
+    }
+
+    filesize = lseek(source, 0, SEEK_END);
+    printf("Source file size is %ld\n", (long)filesize);
+
+    for (i = filesize - 1; i >= 0; i--)
+    {
+        lseek(source, i, SEEK_SET);
+        if ((n = read(source, &buf, 1)) != 1)
+        {
+            fprintf(stderr, "can't read 1 byte\n");
+            exit(-1);
+        }
+        if ((n = write(dest, &buf, 1)) != 1)
+        {
+            fprintf(stderr, "can't write 1 byte\n");
+            exit(-1);
+        }
+    }
+
+    write(STDOUT_FILENO, "Done\n", 5);
+    close(source);
+    close(dest);
+
+    return 0;
+}
+
+#q9a
+
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/stat.h>
+
+#define RWRWRW (S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH)
+
+int main() {
+    umask(0); // Clear file creation mask
+
+    if (open("foo", O_CREAT | O_WRONLY, RWRWRW) < 0)
+        printf("create error for foo\n");
+
+    umask(S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
+
+    if (open("bar", O_CREAT | O_WRONLY, RWRWRW) < 0)
+        printf("create error for bar\n");
+
+    exit(0);
+}
+
+#include <fcntl.h>
+#include <stdio.h>
+#include <sys/stat.h>
+#include <stdlib.h>
+
+#define RWRWRW (S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH)
+
+int main() {
+    struct stat statbuf;
+
+    // Stat for foo
+    if (stat("foo", &statbuf) < 0)
+        perror("Stat error for foo");
+    // Chmod for foo
+    if (chmod("foo", (statbuf.st_mode & ~S_IXGRP) | S_ISGID) < 0)
+        perror("Chmod error for foo");
+
+    // Chmod for bar
+    if (chmod("bar", RWRWRW) < 0)
+        perror("Chmod error for bar");
+
+    exit(0);
+}
+
+#q9b
+
+#include<stdio.h>
+#include<unistd.h>
+#include<fcntl.h>
+#include<sys/types.h>
+
+int main(){
+        int file=0,n;
+        char buffer[25];
+
+        if((file=open("t12.txt",O_RDONLY))<-1)
+                printf("file open error\n");
+
+        if(read(file,buffer,20)!=20)
+                printf("file read operation failed\n");
+        else
+                write(1,buffer,20);
+        printf("\n");
+
+        if(lseek(file,10,SEEK_SET)<0)
+                printf("lseek operation to begining of the file failed\n");
+        if(read(file,buffer,20)!=20)
+                printf("file read operation failed\n");
+        else
+                write(1,buffer,20);
+        printf("\n");
+
+        if(lseek(file,10,SEEK_CUR)<0)
+                printf("lseek operation to beginning of file failed\n");
+
+        if(read(file,buffer,20)!=20)
+                printf("file read operation failed\n");
+        else
+                write(1,buffer,20);
+        printf("\n");
+
+        if((n=lseek(file,0,SEEK_END))<0)
+                printf("lseek operation to end of file failed\n");
+        printf("size of the file is %d bytes\n",n);
+
+
+        close(file);
+        return 0;
+}
+
+#q4a
+
+#include <stdio.h>
+#include <fcntl.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
+int main(int argc, char *argv[]) {
+    if (argc == 3) {
+        printf("Hard linking %s and %s ", argv[1], argv[2]);
+        if (link(argv[1], argv[2]) == 0)
+            printf("\nHard Link created\n");
+        else
+            printf("\nLink not created\n");
+    } else if (argc == 4) {
+        printf("Soft linking %s and %s ", argv[1], argv[2]);
+        if (symlink(argv[1], argv[2]) == 0)
+            printf("Soft Link created\n");
+        else
+            printf("\nLink not created\n");
+    }
+    return 0;
+}
+
+#q7a
+#include<setjmp.h>
+#include<stdio.h>
+#include<stdlib.h>
+
+static void f1(int,int,int,int);
+static void f2(void);
+
+static jmp_buf jmpbuffer;
+static int globval;
+
+int main(void){
+	int autoval;
+	register int regival;
+	volatile int volaval;
+	static int statval;
+
+	globval=1;
+	autoval=2;
+	regival=3;
+	volaval=4;
+	statval=5;
+
+	if(setjmp(jmpbuffer)!=0){
+		printf("After longjmp:\n");
+		printf("%d %d %d %d %d \n",globval, autoval, regival, volaval, statval);
+		exit(0);
+	}
+
+	globval=95;
+        autoval=96;
+        regival=97;
+        volaval=98;
+        statval=99;
+	f1(autoval, regival, volaval, statval);
+	exit(0);
+}
+
+static void f1(int i, int j, int k, int l){
+	printf("in F1():\n");
+	printf("%d %d %d %d %d \n",globval,i,j,k,l);
+	globval = 10000;
+	j = 10000;
+	f2();
+}
+
+static void f2(void){
+	longjmp(jmpbuffer,1);
+}
+
+#q5a
+
+#include<stdio.h>
+#include<sys/stat.h>
+#include<sys/types.h>
+#include<unistd.h>
+#include<utime.h>
+#include<time.h>
+#include<fcntl.h>
+
+int main(int argc, char *argv[]){
+        int fd;
+        struct stat statbuf_1;
+        struct stat statbuf_2;
+        struct utimbuf times;
+
+        if(stat(argv[1], &statbuf_1)<0)
+                printf("Error!\n");
+
+        if(stat(argv[2], &statbuf_2)<0)
+                printf("Error!\n");
+
+        printf("Before copying..\n");
+        printf("Acces Time %s\n Modification Time %s \n", ctime(&statbuf_1.st_atime),ctime(&statbuf_2.st_mtime));
+
+        times.modtime = statbuf_2.st_mtime;
+        times.actime = statbuf_2.st_mtime;
+
+        if(utime(argv[1], &times)<0)
+                printf("Error copying time \n");
+        if(stat(argv[1], &statbuf_1)<0)
+                printf("Error \n");
+        printf("After copying..\n");
+        printf("Acces Time %s\n Modification Time %s \n", ctime(&statbuf_1.st_atime),ctime(&statbuf_2.st_mtime));
+}
+~      
+#q5b
+
+#include<stdio.h>
+#include<stdlib.h>
+#include<signal.h>
+#include<unistd.h>
+
+void sigint_handler(int signum){
+        printf("Caught SIGINT (signal number: %d). Now resetting to default action.\n", signum);
+
+        struct sigaction sa;
+        sa.sa_handler = SIG_DFL;
+        sa.sa_flags = 0;
+        sigemptyset(&sa.sa_mask);
+
+        if(sigaction(SIGINT, &sa, NULL)==-1){
+                perror("sigaction");
+                exit(EXIT_FAILURE);
+        }
+}
+
+int main(){
+        struct sigaction sa;
+        sa.sa_handler = sigint_handler;
+        sa.sa_flags = 0;
+        sigemptyset(&sa.sa_mask);
+
+        if(sigaction(SIGINT, &sa, NULL)==-1){
+                perror("sigaction");
+                exit(EXIT_FAILURE);
+        }
+
+        printf("Press Ctrl+C to trigger SIGINT. After the first Ctrl+C, the default action will be restored.\n");
+
+        while(1){
+                pause();
+        }
+
+        return 0;
+}
+
+#q10a
+
+#include<stdio.h>
+#include<stdlib.h>
+#include<unistd.h>
+#include<fcntl.h>
+#include<sys/stat.h>
+#include<sys/types.h>
+#include<syslog.h>
+
+void create_daemon(){
+	pid_t pid;
+
+	pid = fork();
+
+	if(pid<0){
+		exit(EXIT_FAILURE);
+	}
+
+	if(pid>0){
+		exit(EXIT_SUCCESS);
+	}
+	if(setsid()<0){
+		exit(EXIT_FAILURE);
+	}
+
+	umask(0);
+
+	if((chdir("/"))<0){
+		exit(EXIT_FAILURE);
+	}
+
+	close(STDIN_FILENO);
+	close(STDOUT_FILENO);
+	close(STDERR_FILENO);
+
+	open("/dev/null", O_RDONLY);
+	open("/dev/null", O_WRONLY);
+	open("/dev/null", O_WRONLY);
+
+}
+
+int main(){
+	create_daemon();
+
+	openlog("daemon_example", LOG_PID, LOG_DAEMON);
+
+	while(1){
+		syslog(LOG_NOTICE, "Daemon is running..");
+		sleep(30);
+	}
+
+	closelog();
+
+	return EXIT_SUCCESS;
+}
+
+run command - ps -axl
+
+#q3a
+
+#include<stdio.h>
+#include<stdlib.h>
+#include<unistd.h>
+#include<sys/types.h>
+#include<sys/wait.h>
+
+int my_system(const char *command){
+	if(command == NULL){
+		return -1;
+	}
+
+	pid_t pid = fork();
+	if(pid<0){
+		return -1;
+	}else if(pid==0){
+		execl("/bin/sh","sh","-c", command, (char *)NULL);
+		perror("execl");
+		exit(EXIT_FAILURE);
+	} else{
+		int status;
+		if(waitpid(pid,&status,0) == -1){
+			return -1;
+		}
+
+		if(WIFEXITED(status)){
+			return WEXITSTATUS(status);
+		} else{
+			return -1;
+		}
+	}
+}
+
+int main(){
+	printf("Running 'ls -l':\n");
+	int result = my_system("ls -l");
+	
+	if (result ==-1){
+		perror("my_system");
+	}
+	else{
+		printf("ls -l exited with status %d\n", result);
+	}
+
+	return 0;
+}
+
+#Q6A
+
+#include <fcntl.h>
+#include <unistd.h>
+#include <dirent.h> // Include dirent.h for DIR and struct dirent
+
+int main()
+{
+    DIR *dp;
+    struct dirent *dir; // Change from struct direct to struct dirent
+    int fd, n;
+    dp = opendir(".");
+
+    if (dp) {
+        while ((dir = readdir(dp)) != NULL) {
+            fd = open(dir->d_name, O_RDWR); // Removed file mode argument (0777)
+            if (fd != -1) { // Check if file opened successfully
+                n = lseek(fd, 0, SEEK_END);
+                if (!n) {
+                    unlink(dir->d_name);
+                }
+                close(fd); // Close the file after checking its size
+            }
+        }
+        closedir(dp); // Close the directory after traversing
+    }
+
+    return 0;
+}
+
+
